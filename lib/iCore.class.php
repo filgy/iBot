@@ -5,15 +5,17 @@
 
 		private $servers = Array();
 		
+		private $timers = Array();
+		
 		public function __construct(){
 			$this->socketPoll = new iSocketPoll();
 
 		}
 		
 		public function addServer($serverName, $remoteHost, $remotePort, Array $channels = Array()){
-			$server = new iServer($serverName, $remoteHost, $remotePort, $channels);
 			
-			$this->servers[$serverName] = $server;
+			$this->servers[$serverName] = new iServer($serverName, $remoteHost, $remotePort, $channels);
+			$this->timers[$serverName] = new iTimer(); 
 			
 			return $this->servers[$serverName];
 		}
@@ -26,7 +28,8 @@
 		}
 		
 		public function run(){
-			//$this->socketPoll->addSocket($server->getRemoteHost(), $server->getRemotePort());
+			foreach($this->servers as $server)
+				$this->socketPoll->addSocket($server->getServerName(), $server->getRemoteHost(), $server->getRemotePort());
 			
 			if($this->socketPoll->getCount() == 0)
 				throw new iCoreException("Cannot start bot without any servers");

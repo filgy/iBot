@@ -1,7 +1,7 @@
 <?php
 
-	DEFINE("SOCK_READY",					0);
-	DEFINE("SOCK_CONNECTING",			1);
+	DEFINE("SOCK_EMPTY",					0);
+	DEFINE("SOCK_READY",					1);
 	DEFINE("SOCK_CONNECTED",			2);
 	DEFINE("SOCK_DISCONNECTED",		3);
 
@@ -13,32 +13,34 @@
 		
 		private $status;
 
-		private $inputSize;		
-		private $inputBuffer;
+		private $inputBufer;		
+		private $inputQueue;
 		
-		private $outputSize;
-		private $outputBuffer;
+		private $lineDelimiter;
 		
 		public function __construct($remoteHost, $remotePort){
 			$this->remoteHost = gethostbyname($remoteHost);
 			$this->remotePort = $remotePort;
-			$this->status = SOCK_READY;
 			
-			$this->inputSize = 0;
 			$this->inputBuffer = "";
-			$this->outputSize = 0;
-			$this->outputBuffer = "";
+			$this->inputQueue = new iQueue();
+			
+			$this->lineDelimiter = "\n";
+			
+			$this->status = SOCK_EMPTY;
 		}
 		
 		public function create(){
 			$this->handler = socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
-			
+
 			if($this->handler === FALSE)
 				throw new iNetworkException("Cannot create socket");
 			
 //			socket_set_nonblock($this->handler);
+			socket_set_option($this->handler, SOL_SOCKET, SO_REUSEADDR, 1);
+			socket_set_option($this->handler, SOL_SOCKET, SO_RCVTIMEO, Array('sec' => 0, 'usec' => 1));
 			
-			$this->status = SOCK_CONNECTING;
+			$this->status = SOCK_READY;
 		}
 		
 		public function connect(){
@@ -51,18 +53,22 @@
 		}
 		
 		public function read(){
-			$this->inputBuffer = socket_read($this->handler, 1024, PHP_NORMAL_READ);
+			while(($buffer = socket_read($this->handler, 1024, PHP_BINARY_READ)) != "")
+				$this->inputBuffer .= trim($buffer).$this->lineDelimiter;
 			
-			echo trim($this->inputBuffer)."\n";
+			while(($pos = strpos($this->inputBuffer, "\n")) !== FALSE){
+				$this->inputQueue->push(substr($this->inputBuffer, 0, $pos)); 
+				
+				$this->inputBuffer = substr($this->inputBuffer, $pos + 1);
+			}
 		}
 		
-		public function write(){
-			
+		public function write($data){
+			socket_write($this->handler, $data.$this->lineDelimiter, strlen($data.$this->lineDelimiter));
 		}
 		
-		public function clearInputBuffer(){
-			$this->inputBuffer = "";
-			$this->inputSize = 0;
+		public function clearInputQueue(){
+			$this->inputQueue->clear();
 		}
 		
 		public function disconnect(){
@@ -71,6 +77,10 @@
 		
 		public function getHandler(){
 			return $this->handler;
+		}
+		
+		public function getInputQueue(){
+			return $this->inputQueue;
 		}
 		
 		public function getInputBuffer(){
