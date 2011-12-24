@@ -2,6 +2,10 @@
 
 	class  iServer{
 		private $serverName;
+		
+		private $userName;
+		private $userDomain;
+		private $userRealName;
 
 		private $remoteHost;
 		private $remotePort;
@@ -13,6 +17,10 @@
 			$this->remoteHost = $remoteHost;
 			$this->remotePort = $remotePort;
 			$this->channels = $channels;
+			
+			$this->userName = "iBot";
+			$this->userDomain = "sniff.cz";
+			$this->userRealName = "HistCrawler";
 		}
 		
 		public function __destruct(){
@@ -27,8 +35,27 @@
 			return $this;
 		}
 		
+		public function setUser($userName, $userDomain, $userRealName){
+			$this->userName = $userName;
+			$this->userDomain = $userDomain;
+			$this->userRealName = $userRealName;
+			return $this;
+		}
+		
 		public function getServerName(){
 			return $this->serverName;
+		}
+		
+		public function getUserName(){
+			return $this->userName;
+		}
+		
+		public function getUserDomain(){
+			return $this->userDomain;
+		}
+		
+		public function getUserRealName(){
+			return $this->userRealName;
 		}
 		
 		public function getChannels(){
